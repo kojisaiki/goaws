@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/Admiral-Piett/goaws/app/utils"
+
 	"github.com/Admiral-Piett/goaws/app"
 
 	log "github.com/sirupsen/logrus"
@@ -18,8 +20,10 @@ import (
 func main() {
 	var filename string
 	var debug bool
+	var loglevel string
 	flag.StringVar(&filename, "config", "", "config file location + name")
-	flag.BoolVar(&debug, "debug", false, "debug log level (default Warning)")
+	flag.BoolVar(&debug, "debug", false, "set debug log level")
+	flag.StringVar(&loglevel, "loglevel", "info", "log level (default info)")
 	flag.Parse()
 
 	log.SetFormatter(&log.JSONFormatter{})
@@ -28,7 +32,13 @@ func main() {
 	if debug {
 		log.SetLevel(log.DebugLevel)
 	} else {
-		log.SetLevel(log.InfoLevel)
+		level, err := log.ParseLevel(loglevel)
+		if err != nil {
+			log.SetLevel(log.InfoLevel)
+			log.Warnf("Failed to parse loglevel %v, defaulting to info", loglevel)
+		} else {
+			log.SetLevel(level)
+		}
 	}
 
 	env := "Local"
@@ -52,6 +62,8 @@ func main() {
 
 	quit := make(chan struct{}, 0)
 	go gosqs.PeriodicTasks(1*time.Second, quit)
+
+	utils.InitializeDecoders()
 
 	if len(portNumbers) == 1 {
 		log.Warnf("GoAws listening on: 0.0.0.0:%s", portNumbers[0])
